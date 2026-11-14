@@ -62,5 +62,5 @@
 | `bower-christensen-1995` | 문헌 | Bower, J. L., & Christensen, C. M. (1995). Disruptive Technologies: Catching the Wave. Harvard Business Review, January–February. | 파괴적 기술과 기존 강자의 실패. | | https://hbr.org/1995/01/disruptive-technologies-catching-the-wave | 2026-11-14 | |
 | `teece-1997` | 문헌 | Teece, D. J., Pisano, G., & Shuen, A. (1997). Dynamic Capabilities and Strategic Management. Strategic Management Journal, 18(7), 509–533. | 동적 역량. | | https://doi.org/10.1002/(SICI)1097-0266(199708)18:7<509::AID-SMJ882>3.0.CO;2-Z | 2026-11-14 | |
 | `teece-2010` | 문헌 | Teece, D. J. (2010). Business Models, Business Strategy and Innovation. Long Range Planning. | 2010년 4월호(Crossref). 사업모델과 전략의 관계. | | https://doi.org/10.1016/j.lrp.2009.07.003 | 2026-11-14 | |
-| `williamson-1985` | 문헌 | Williamson, O. E. (1985). The Economic Institutions of Capitalism. Free Press. | 거래 비용 경제학과 기업의 경계(수직 통합). 서지는 Open Library로 확인. | | https://openlibrary.org/search?q=the+economic+institutions+of+capitalism | 2026-11-14 | |
+| `williamson-1985` | 문헌 | Williamson, O. E. (1985). The Economic Institutions of Capitalism. Free Press. | 거래 비용 경제학과 기업의 경계(수직 통합). 서지는 Open Library로 확인. | | https://openlibrary.org/works/OL3477521W | 2026-11-14 | |
 | `none` | 없음 | 법령 근거 없음 | 이 모듈은 국내 법령 근거가 없거나 학습자 결정에 따라 정한다. 사례는 공개 자료를 그 자리에서 조사한다. | | | | |

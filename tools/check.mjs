@@ -40,6 +40,15 @@ function parseCurriculum(text) {
   const modules = new Map();
   const meta = new Map();
   const problems = [];
+  // 모듈이 자기 영역 제목 아래 있는지 본다
+  let area = null;
+  for (const line of text.split("\n")) {
+    const am = line.match(/^## ([APGEX]) · /);
+    if (am) area = am[1];
+    else if (/^## /.test(line)) area = null;
+    const mm = line.match(/^### ([APGEX])\d+ · /);
+    if (mm && mm[1] !== area) problems.push(`${line.slice(4, 8)}: 영역 ${mm[1]} 제목 아래에 있지 않음`);
+  }
   const blocks = text.split(/^### /m).slice(1).map((b) => b.split(/^## /m)[0]);
   for (const block of blocks) {
     const head = block.split("\n")[0];
@@ -112,7 +121,7 @@ function parseSources(text) {
 
 function findVisualAssets(files) {
   const allowedJs = /^tools\/.*\.m?js$/;
-  return files.filter((f) => /\.(html?|css|svg|png|jpe?g|gif|webp|avif)$/i.test(f) || (/\.m?js$/i.test(f) && !allowedJs.test(f)));
+  return files.filter((f) => /\.(html?|css|svg|png|jpe?g|gif|webp|avif|ico|bmp|tiff?)$/i.test(f) || (/\.m?js$/i.test(f) && !allowedJs.test(f)));
 }
 
 function findTemplateMarkup(name, text) {
