@@ -16,12 +16,19 @@ const FIELDS = ["선수", "핵심 질문", "목표", "만들어 볼 것", "국�
 const LEGAL_KINDS = ["법률", "시행령", "고시", "기준"];
 // R10: 국내 근거에 법령·고시·기준이 있어야 하는 모듈
 const LEGAL_REQUIRED = (id) => /^G\d+$/.test(id) || id === "E3" || id === "E5";
-// R13: spec.md 경계 표의 이웃
-const NEIGHBORS = ["go-startup-agile", "go-valuation", "go-finance", "go-marketing", "go-sales", "go-economics", "go-control",
-  "go-compliance-and-legal", "go-esg", "go-leadership-negotiation", "go-product", "go-operations", "go-scm", "go-tax",
-  "go-mis", "go-ai", "go-project-management", "go-accounting", "go-data-analytics", "go-hr"];
+// R13: spec.md 경계 표의 첫 열에서 이웃 목록을 읽는다
+function parseNeighbors(spec) {
+  const out = [];
+  const i = spec.indexOf("| 이웃 |");
+  if (i < 0) return out;
+  for (const line of spec.slice(i).split("\n").slice(2)) {
+    if (!line.startsWith("|")) break;
+    for (const n of line.split("|")[1].split("·")) if (/^go-[a-z-]+$/.test(n.trim())) out.push(n.trim());
+  }
+  return out;
+}
 // R11(4): 금액·지정 기준·도입 일정이 자주 바뀌는 항목
-const VOLATILE = (r) => ["법률", "시행령", "고시"].includes(r.kind) || /(억\s?원|조\s?원|달러|유로|파운드|[$€£]|시행|의무화|적용 시기|발효)/.test(r.fact);
+const VOLATILE = (r) => ["법률", "시행령", "고시"].includes(r.kind) || /(억\s?원|조\s?원|만\s?엔|억\s?엔|엔|달러|유로|파운드|EUR|[$€£]|시행|의무화|적용|발효|이후 시작)/.test(r.fact);
 // R11: 공식 출처로 인정하는 도메인(하위 도메인 포함)
 const ALLOWED_DOMAINS = ["law.go.kr", "likms.assembly.go.kr", "ftc.go.kr", "egroup.go.kr", "fsc.go.kr", "fss.or.kr", "dart.fss.or.kr",
   "kasb.or.kr", "kai.or.kr", "krx.co.kr", "kind.krx.co.kr", "kostat.go.kr", "kosis.kr", "moef.go.kr", "alio.go.kr", "moleg.go.kr", "elaw.klri.re.kr",
@@ -33,7 +40,7 @@ function parseCurriculum(text) {
   const modules = new Map();
   const meta = new Map();
   const problems = [];
-  const blocks = text.split(/^### /m).slice(1);
+  const blocks = text.split(/^### /m).slice(1).map((b) => b.split(/^## /m)[0]);
   for (const block of blocks) {
     const head = block.split("\n")[0];
     const m = head.match(/^([APGEX]\d+) · (.+)$/);
@@ -46,6 +53,16 @@ function parseCurriculum(text) {
       if (f) fields[f[1]] = f[2];
     }
     for (const name of FIELDS) if (!fields[name]) problems.push(`${id}: 「${name}」 없음`);
+    for (const line of block.split("\n").slice(1)) {
+      if (!line.trim() || line.startsWith("## ")) continue;
+      const f = line.match(/^- ([^:]+): (.+)$/);
+      if (!f || ![...FIELDS, "경계·연결"].includes(f[1])) problems.push(`${id}: 허용되지 않은 줄 「${line.slice(0, 30)}」`);
+    }
+    const rawKeys = (v) => [...(v || "").matchAll(/`([a-z0-9-]+)`/g)].map((x) => x[1]);
+    for (const name of ["국내 근거", "글로벌 비교"]) {
+      const ks = rawKeys(fields[name]);
+      if (ks.length && ks.every((k) => k === "none") && !(fields[name] || "").replace(/`[^`]+`/g, "").trim()) problems.push(`${id}: 「${name}」 none의 이유 없음`);
+    }
     if (fields["목표"] && !LEVELS.some((l) => fields["목표"].startsWith(`${l} — `))) problems.push(`${id}: 목표 수준 형식 오류`);
     const keys = (v) => [...(v || "").matchAll(/`([a-z0-9-]+)`/g)].map((x) => x[1]);
     for (const name of ["국내 근거", "글로벌 비교", "근거"]) if (fields[name] && keys(fields[name]).length === 0) problems.push(`${id}: 「${name}」에 출처 키 없음`);
@@ -54,6 +71,7 @@ function parseCurriculum(text) {
     const prereq = !fields["선수"] || fields["선수"] === "없음" ? [] : fields["선수"].split(",").map((s) => s.trim());
     modules.set(id, prereq);
   }
+  for (const a of ["A", "P", "G", "E", "X"]) if (!new RegExp(`^## ${a} · `, "m").test(text)) problems.push(`영역 ${a} 제목 없음`);
   for (const [id, prereq] of modules) for (const p of prereq) if (!modules.has(p)) problems.push(`${id}: 없는 선수 ${p}`);
   const state = new Map();
   const visit = (id, path) => {
@@ -73,8 +91,8 @@ function parseSources(text) {
   const problems = [];
   for (const line of text.split("\n")) {
     const cells = line.split("|").slice(1, -1).map((c) => c.trim());
-    if (cells.length !== 8) continue;
-    const km = cells[0].match(/^`([a-z0-9-]+)`$/);
+    if (cells.length !== 8) { if (/^\|\s*`[a-z0-9-]+`\s*\|/.test(line)) problems.push(`sources: 칸 수 오류 ${line.slice(0, 40)}`); continue; }
+    const km = (cells[0] || "").match(/^`([a-z0-9-]+)`$/);
     if (!km) continue;
     const [, kind, name, fact, articles, url, date, recheck] = cells;
     const key = km[1];
@@ -120,12 +138,13 @@ function main() {
   // R11(4): 개정이 잦은 항목은 「다시 확인」 칸이 채워져 있어야 한다
   for (const [k, r] of src.rows) if (VOLATILE(r) && !/다시 확인/.test(r.recheck)) errors.push(`sources: ${k} 「다시 확인」 표시 없음`);
   const boundaryText = [...modules.keys()].map((id) => meta.get(id + "#boundary")).join("\n");
+  const NEIGHBORS = parseNeighbors(read("docs/build/spec.md"));
+  if (NEIGHBORS.length < 10) errors.push("spec.md 경계 표를 읽지 못함");
   for (const n of NEIGHBORS) if (!new RegExp(`${n}(?![a-z-])`).test(boundaryText)) errors.push(`경계·연결에 ${n} 없음`);
-  const specText = read("docs/build/spec.md");
   for (const m of new Set([...read("curriculum/map.md").matchAll(/go-[a-z-]+[a-z]/g)].map((x) => x[0]))) {
     if (!NEIGHBORS.includes(m)) errors.push(`지도의 ${m}이 경계 목록에 없음`);
   }
-  for (const n of NEIGHBORS) if (!specText.includes(`| ${n}`) && !specText.includes(`·${n}`)) errors.push(`spec.md 경계 표에 ${n} 없음`);
+
 
   const files = execFileSync("git", ["ls-files", "--cached", "--others", "--exclude-standard", "-z"], { cwd: root, encoding: "utf8" }).split("\0").filter(Boolean);
   for (const f of findVisualAssets(files)) errors.push(`미리 만든 시각 자료 금지: ${f}`);
